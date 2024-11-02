@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dtos/create-order.dto';
+import { EventPattern } from '@nestjs/microservices';
+import { UpdateOrderStatusDto } from './dtos/update-order-status.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -34,5 +36,10 @@ export class OrdersController {
   @Get('customer/:customerId')
   async getOrdersByCustomer(@Param('customerId') customerId: string) {
     return this.orderService.getOrdersByCustomer(customerId);
+  }
+
+  @EventPattern('order_status_changed')
+  async handleOrderIn(data: UpdateOrderStatusDto) {
+    return this.orderService.handleOrderIn(data);
   }
 }

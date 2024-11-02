@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { ClientProxy, EventPattern } from '@nestjs/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrderEntity } from './entities/order.entity';
@@ -10,10 +10,12 @@ import { UpdateOrderStatusDto } from './dtos/update-order-status.dto';
 @Injectable()
 export class OrdersService {
   constructor(
-    @Inject('KITCHEN_SERVICE') private readonly orderClient: ClientProxy,
+    @Inject('KITCHEN_SERVICE') private readonly kitchenClient: ClientProxy,
     @InjectRepository(OrderEntity)
     private readonly orderRepository: Repository<OrderEntity>,
-  ) {}
+  ) {
+    this.kitchenClient.connect();
+  }
 
   async createOrder(createOrderDto: CreateOrderDto) {
     try {
@@ -26,9 +28,13 @@ export class OrdersService {
         .into(OrderEntity)
         .values(orderData)
         .execute();
-      const parsedOrder = convertToCamelCase(order.raw[0]);
 
-      this.orderClient.emit('order_dispatched', parsedOrder);
+      const parsedOrder = order.generatedMaps[0];
+
+      this.kitchenClient.emit('order_dispatched', {
+        ...parsedOrder,
+        customerId: createOrderDto.customerId,
+      });
 
       return {
         message: 'Order dispatched successfully',
@@ -48,7 +54,6 @@ export class OrdersService {
     return await this.orderRepository.find({ where: { customerId } });
   }
 
-  @EventPattern('order_status_changed')
   async handleOrderIn(data: UpdateOrderStatusDto) {
     console.log('Order status changed event received:', data);
 

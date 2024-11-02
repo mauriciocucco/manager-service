@@ -14,7 +14,7 @@ export class OrderEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'customer_id' })
+  @Column({ name: 'customer_id', select: true })
   customerId: string;
 
   @Column({ name: 'status_id', default: 1 })
