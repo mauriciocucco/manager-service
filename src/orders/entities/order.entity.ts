@@ -14,11 +14,14 @@ export class OrderEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'customer_id', select: true })
+  @Column({ name: 'customer_id' })
   customerId: string;
 
   @Column({ name: 'status_id', default: 1 })
   statusId: number;
+
+  @Column({ name: 'recipe_name', nullable: true })
+  recipeName: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

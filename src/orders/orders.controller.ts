@@ -5,41 +5,39 @@ import {
   Body,
   Param,
   HttpCode,
-  InternalServerErrorException,
+  UseGuards,
+  Query,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dtos/create-order.dto';
 import { EventPattern } from '@nestjs/microservices';
 import { UpdateOrderStatusDto } from './dtos/update-order-status.dto';
+import { ApiGatewayGuard } from '../common/guards/api-gateway.guard';
+import { GetOrdersDto } from './dtos/get-orders.dto';
 
+@UseGuards(ApiGatewayGuard)
 @Controller('orders')
 export class OrdersController {
-  constructor(private readonly orderService: OrdersService) {}
+  constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
   @HttpCode(201)
-  async createOrder(@Body() createOrderDto: CreateOrderDto) {
-    const response = await this.orderService.createOrder(createOrderDto);
-
-    if (response.error) {
-      throw new InternalServerErrorException(response);
-    }
-
-    return {
-      ...response,
-      metadata: {
-        timestamp: new Date().toISOString(),
-      },
-    };
+  async createOrders(@Body() createOrdersDto: CreateOrderDto[]) {
+    return await this.ordersService.createBulkOrders(createOrdersDto);
   }
 
-  @Get('customer/:customerId')
-  async getOrdersByCustomer(@Param('customerId') customerId: string) {
-    return this.orderService.getOrdersByCustomer(customerId);
+  @Get()
+  async getAllOrders(@Query() getOrdersDto?: GetOrdersDto) {
+    return this.ordersService.getAllOrders(getOrdersDto);
+  }
+
+  @Get(':id')
+  async getOrderById(@Param('id') id: string) {
+    return this.ordersService.getOrderById(id);
   }
 
   @EventPattern('order_status_changed')
-  async handleOrderIn(data: UpdateOrderStatusDto) {
-    return this.orderService.handleOrderIn(data);
+  async handleOrderChangeStatus(data: UpdateOrderStatusDto) {
+    return this.ordersService.handleOrderChangeStatus(data);
   }
 }

@@ -1,6 +1,6 @@
 import { IsUUID } from 'class-validator';
 
 export class CreateOrderDto {
-  @IsUUID('3')
+  @IsUUID('4')
   customerId: string;
 }
