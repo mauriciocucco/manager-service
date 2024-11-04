@@ -41,8 +41,6 @@ describe('OrdersService', () => {
     kitchenClient = module.get<ClientProxy>(
       'KITCHEN_SERVICE',
     ) as DeepMocked<ClientProxy>;
-
-    // Mock the QueryRunner
     queryRunner = createMock<QueryRunner>();
     dataSource.createQueryRunner.mockReturnValue(queryRunner);
   });
@@ -63,36 +61,26 @@ describe('OrdersService', () => {
         id: `order-uuid-${index + 1}`,
       }));
 
-      // Mock repository methods
       orderRepository.create.mockReturnValue(orders as any);
       orderRepository.save.mockResolvedValue(savedOrders as any);
-
-      // Mock queryRunner methods
       queryRunner.connect.mockResolvedValue(undefined);
       queryRunner.startTransaction.mockResolvedValue(undefined);
       queryRunner.commitTransaction.mockResolvedValue(undefined);
       queryRunner.release.mockResolvedValue(undefined);
-
-      // Mock kitchenClient.emit
       kitchenClient.emit.mockReturnValue(undefined);
 
       const result = await service.createBulkOrders(createOrdersDto);
 
-      // Assertions
       expect(queryRunner.connect).toHaveBeenCalledTimes(1);
       expect(queryRunner.startTransaction).toHaveBeenCalledTimes(1);
-
       expect(orderRepository.create).toHaveBeenCalledWith(createOrdersDto);
       expect(orderRepository.save).toHaveBeenCalledWith(orders);
-
       expect(queryRunner.commitTransaction).toHaveBeenCalledTimes(1);
       expect(queryRunner.release).toHaveBeenCalledTimes(1);
-
       expect(kitchenClient.emit).toHaveBeenCalledWith(
         Events.ORDER_DISPATCHED,
         savedOrders,
       );
-
       expect(result).toEqual({
         message: 'Order dispatched successfully',
         orders,
@@ -106,33 +94,25 @@ describe('OrdersService', () => {
 
       const orders = createOrdersDto.map((dto) => ({ ...dto }));
 
-      // Mock repository methods
       orderRepository.create.mockReturnValue(orders as any);
       orderRepository.save.mockRejectedValue(new Error('Test error'));
-
-      // Mock queryRunner methods
       queryRunner.connect.mockResolvedValue(undefined);
       queryRunner.startTransaction.mockResolvedValue(undefined);
       queryRunner.rollbackTransaction.mockResolvedValue(undefined);
       queryRunner.release.mockResolvedValue(undefined);
 
-      // Mock kitchenClient.emit (should not be called)
       kitchenClient.emit.mockReturnValue(undefined);
 
       await expect(service.createBulkOrders(createOrdersDto)).rejects.toThrow(
         InternalServerErrorException,
       );
 
-      // Assertions
       expect(queryRunner.connect).toHaveBeenCalledTimes(1);
       expect(queryRunner.startTransaction).toHaveBeenCalledTimes(1);
-
       expect(orderRepository.create).toHaveBeenCalledWith(createOrdersDto);
       expect(orderRepository.save).toHaveBeenCalledWith(orders);
-
       expect(queryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
       expect(queryRunner.release).toHaveBeenCalledTimes(1);
-
       expect(kitchenClient.emit).not.toHaveBeenCalled();
     });
   });
