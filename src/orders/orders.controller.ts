@@ -38,7 +38,7 @@ export class OrdersController {
   }
 
   @EventPattern(Events.ORDER_STATUS_CHANGED)
-  async handleOrderChangeStatus(data: UpdateOrderStatusDto) {
+  async handleOrderChangeStatus(data: UpdateOrderStatusDto[]) {
     return this.ordersService.handleOrderChangeStatus(data);
   }
 }

@@ -24,21 +24,18 @@ export class OrdersService {
   }
 
   async createBulkOrders(createOrdersDto: CreateOrderDto[]) {
-    const orderData = createOrdersDto.map((orderDto) => ({ ...orderDto }));
     const queryRunner = this.dataSource.createQueryRunner();
 
     try {
       await queryRunner.connect();
       await queryRunner.startTransaction();
 
-      const orders = await this.orderRepository.create(orderData);
+      const orders = await this.orderRepository.create(createOrdersDto);
       const savedOrders = await this.orderRepository.save(orders);
 
       await queryRunner.commitTransaction();
 
-      for (const order of savedOrders) {
-        this.kitchenClient.emit(Events.ORDER_DISPATCHED, order);
-      }
+      this.kitchenClient.emit(Events.ORDER_DISPATCHED, savedOrders);
 
       return {
         message: 'Order dispatched successfully',
@@ -86,28 +83,40 @@ export class OrdersService {
     return this.orderRepository.findOne({ where: { id } });
   }
 
-  async handleOrderChangeStatus(data: UpdateOrderStatusDto) {
-    console.log('Order status changed event received:', data);
+  async handleOrderChangeStatus(data: UpdateOrderStatusDto[]) {
+    console.log('Orders statuses changed event received:', data);
 
-    const { id: orderId, statusId: newStatusId } = data;
+    const queryRunner = this.dataSource.createQueryRunner();
 
     try {
-      const updateData: Partial<OrderEntity> = { statusId: newStatusId };
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
-      if (data.recipeName) {
-        updateData.recipeName = data.recipeName;
+      for (const updateDto of data) {
+        const { id: orderId, statusId: newStatusId } = updateDto;
+        const updateData: Partial<OrderEntity> = { statusId: newStatusId };
+
+        if (updateDto.recipeName) {
+          updateData.recipeName = updateDto.recipeName;
+        }
+
+        await this.orderRepository
+          .createQueryBuilder()
+          .update(OrderEntity)
+          .set(updateData)
+          .where('id = :orderId', { orderId })
+          .execute();
+
+        console.log(`Order ${orderId} status updated to ${newStatusId}`);
       }
 
-      await this.orderRepository
-        .createQueryBuilder()
-        .update(OrderEntity)
-        .set(updateData)
-        .where('id = :orderId', { orderId })
-        .execute();
-
-      console.log(`Order ${orderId} status updated to ${newStatusId}`);
+      await queryRunner.commitTransaction();
     } catch (error) {
-      console.error(`Failed to update order ${orderId} status: `, error);
+      console.error('Failed to update orders statuses:', error);
+
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
     }
   }
 }
