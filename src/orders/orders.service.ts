@@ -10,6 +10,7 @@ import { OrderEntity } from './entities/order.entity';
 import { CreateOrderDto } from './dtos/create-order.dto';
 import { UpdateOrderStatusDto } from './dtos/update-order-status.dto';
 import { GetOrdersDto } from './dtos/get-orders.dto';
+import { Events } from './enums/events.enum';
 
 @Injectable()
 export class OrdersService {
@@ -36,7 +37,7 @@ export class OrdersService {
       await queryRunner.commitTransaction();
 
       for (const order of savedOrders) {
-        this.kitchenClient.emit('order_dispatched', order);
+        this.kitchenClient.emit(Events.ORDER_DISPATCHED, order);
       }
 
       return {

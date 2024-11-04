@@ -14,6 +14,7 @@ import { EventPattern } from '@nestjs/microservices';
 import { UpdateOrderStatusDto } from './dtos/update-order-status.dto';
 import { ApiGatewayGuard } from '../common/guards/api-gateway.guard';
 import { GetOrdersDto } from './dtos/get-orders.dto';
+import { Events } from './enums/events.enum';
 
 @UseGuards(ApiGatewayGuard)
 @Controller('orders')
@@ -36,7 +37,7 @@ export class OrdersController {
     return this.ordersService.getOrderById(id);
   }
 
-  @EventPattern('order_status_changed')
+  @EventPattern(Events.ORDER_STATUS_CHANGED)
   async handleOrderChangeStatus(data: UpdateOrderStatusDto) {
     return this.ordersService.handleOrderChangeStatus(data);
   }
