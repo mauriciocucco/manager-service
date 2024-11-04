@@ -7,5 +7,9 @@ This project is a challenge for Alegra company. It is designed to demonstrate th
 To run the project locally, make sure you have Docker and Docker Compose installed. Then, execute the following command in the root directory of the project:
 
 ```bash
+docker network create external_network
+```
+
+```bash
 docker-compose up -d --build
 ```
