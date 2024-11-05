@@ -84,7 +84,7 @@ export class OrdersService {
   }
 
   async handleOrderChangeStatus(data: UpdateOrderStatusDto[]) {
-    console.log('Orders statuses changed event received:', data);
+    console.log('Order/s status/es changed event received:', data);
 
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -92,7 +92,9 @@ export class OrdersService {
       await queryRunner.connect();
       await queryRunner.startTransaction();
 
-      for (const updateDto of data) {
+      const updateDtos = Array.isArray(data) ? data : [data];
+
+      for (const updateDto of updateDtos) {
         const { id: orderId, statusId: newStatusId } = updateDto;
         const updateData: Partial<OrderEntity> = { statusId: newStatusId };
 
