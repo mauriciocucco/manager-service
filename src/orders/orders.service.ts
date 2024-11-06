@@ -86,13 +86,17 @@ export class OrdersService {
   async handleOrderChangeStatus(data: UpdateOrderStatusDto[]) {
     console.log('Order/s status/es changed event received:', data);
 
-    const queryRunner = this.dataSource.createQueryRunner();
+    const updateDtos = Array.isArray(data) ? data : [data];
+    const isMoreThanOne = updateDtos.length > 1;
+    const queryRunner = isMoreThanOne
+      ? this.dataSource.createQueryRunner()
+      : null;
 
     try {
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
-      const updateDtos = Array.isArray(data) ? data : [data];
+      if (queryRunner) {
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+      }
 
       for (const updateDto of updateDtos) {
         const { id: orderId, statusId: newStatusId } = updateDto;
@@ -112,13 +116,13 @@ export class OrdersService {
         console.log(`Order ${orderId} status updated to ${newStatusId}`);
       }
 
-      await queryRunner.commitTransaction();
+      if (queryRunner) await queryRunner.commitTransaction();
     } catch (error) {
       console.error('Failed to update orders statuses:', error);
 
-      await queryRunner.rollbackTransaction();
+      if (queryRunner) await queryRunner.rollbackTransaction();
     } finally {
-      await queryRunner.release();
+      if (queryRunner) await queryRunner.release();
     }
   }
 }
