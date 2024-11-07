@@ -3,7 +3,7 @@ import {
   Inject,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RmqContext } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { OrderEntity } from './entities/order.entity';
@@ -83,9 +83,14 @@ export class OrdersService {
     return this.orderRepository.findOne({ where: { id } });
   }
 
-  async handleOrderChangeStatus(data: UpdateOrderStatusDto[]) {
+  async handleOrderChangeStatus(
+    data: UpdateOrderStatusDto[],
+    context: RmqContext,
+  ) {
     console.log('Order/s status/es changed event received:', data);
 
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
     const updateDtos = Array.isArray(data) ? data : [data];
     const isMoreThanOne = updateDtos.length > 1;
     const queryRunner = isMoreThanOne
@@ -117,10 +122,14 @@ export class OrdersService {
       }
 
       if (queryRunner) await queryRunner.commitTransaction();
+
+      channel.ack(originalMsg);
     } catch (error) {
       console.error('Failed to update orders statuses:', error);
 
       if (queryRunner) await queryRunner.rollbackTransaction();
+
+      channel.nack(originalMsg);
     } finally {
       if (queryRunner) await queryRunner.release();
     }
