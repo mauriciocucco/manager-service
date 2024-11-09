@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dtos/create-order.dto';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { UpdateOrderStatusDto } from './dtos/update-order-status.dto';
 import { ApiGatewayGuard } from '../common/guards/api-gateway.guard';
 import { GetOrdersDto } from './dtos/get-orders.dto';
@@ -41,7 +41,8 @@ export class OrdersController {
   async handleOrderChangeStatus(
     @Payload()
     data: UpdateOrderStatusDto[],
+    @Ctx() context: RmqContext,
   ) {
-    return this.ordersService.handleOrderChangeStatus(data);
+    return this.ordersService.handleOrderChangeStatus(data, context);
   }
 }

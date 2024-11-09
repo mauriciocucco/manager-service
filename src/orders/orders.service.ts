@@ -83,10 +83,14 @@ export class OrdersService {
     return this.orderRepository.findOne({ where: { id } });
   }
 
-  async handleOrderChangeStatus(data: UpdateOrderStatusDto[]) {
+  async handleOrderChangeStatus(
+    data: UpdateOrderStatusDto[],
+    context: RmqContext,
+  ) {
     console.log('Orders statuses changed event received:', data);
 
     const queryRunner = this.dataSource.createQueryRunner();
+    const channel = context.getChannelRef();
 
     try {
       await queryRunner.connect();
@@ -111,10 +115,14 @@ export class OrdersService {
       }
 
       await queryRunner.commitTransaction();
+
+      channel.ack(context.getMessage());
     } catch (error) {
       console.error('Failed to update orders statuses:', error);
 
       await queryRunner.rollbackTransaction();
+
+      channel.nack(context.getMessage());
     } finally {
       if (queryRunner) await queryRunner.release();
     }
