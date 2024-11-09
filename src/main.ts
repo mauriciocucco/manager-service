@@ -28,11 +28,9 @@ async function bootstrap() {
     options: {
       urls: [configService.get<string>('RABBITMQ_URL')],
       queue: 'manager_queue',
-      noAck: false,
       queueOptions: {
-        durable: true,
+        durable: false,
       },
-      prefetchCount: 1,
     },
   });
 

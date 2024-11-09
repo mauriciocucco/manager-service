@@ -83,27 +83,16 @@ export class OrdersService {
     return this.orderRepository.findOne({ where: { id } });
   }
 
-  async handleOrderChangeStatus(
-    data: UpdateOrderStatusDto[],
-    context: RmqContext,
-  ) {
-    console.log('Order/s status/es changed event received:', data);
+  async handleOrderChangeStatus(data: UpdateOrderStatusDto[]) {
+    console.log('Orders statuses changed event received:', data);
 
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-    const updateDtos = Array.isArray(data) ? data : [data];
-    const isMoreThanOne = updateDtos.length > 1;
-    const queryRunner = isMoreThanOne
-      ? this.dataSource.createQueryRunner()
-      : null;
+    const queryRunner = this.dataSource.createQueryRunner();
 
     try {
-      if (queryRunner) {
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
-      }
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
-      for (const updateDto of updateDtos) {
+      for (const updateDto of data) {
         const { id: orderId, statusId: newStatusId } = updateDto;
         const updateData: Partial<OrderEntity> = { statusId: newStatusId };
 
@@ -121,15 +110,11 @@ export class OrdersService {
         console.log(`Order ${orderId} status updated to ${newStatusId}`);
       }
 
-      if (queryRunner) await queryRunner.commitTransaction();
-
-      channel.ack(originalMsg);
+      await queryRunner.commitTransaction();
     } catch (error) {
       console.error('Failed to update orders statuses:', error);
 
-      if (queryRunner) await queryRunner.rollbackTransaction();
-
-      channel.nack(originalMsg);
+      await queryRunner.rollbackTransaction();
     } finally {
       if (queryRunner) await queryRunner.release();
     }
