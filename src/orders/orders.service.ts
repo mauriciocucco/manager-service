@@ -24,16 +24,9 @@ export class OrdersService {
   }
 
   async createBulkOrders(createOrdersDto: CreateOrderDto[]) {
-    const queryRunner = this.dataSource.createQueryRunner();
-
     try {
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
       const orders = await this.orderRepository.create(createOrdersDto);
       const savedOrders = await this.orderRepository.save(orders);
-
-      await queryRunner.commitTransaction();
 
       this.kitchenClient.emit(Events.ORDER_DISPATCHED, savedOrders);
 
@@ -44,11 +37,7 @@ export class OrdersService {
     } catch (error) {
       console.error('Failed to dispatch orders: ', error);
 
-      await queryRunner.rollbackTransaction();
-
       throw new InternalServerErrorException('Failed to dispatch orders');
-    } finally {
-      await queryRunner.release();
     }
   }
 
@@ -104,7 +93,7 @@ export class OrdersService {
           updateData.recipeName = updateDto.recipeName;
         }
 
-        await this.orderRepository
+        await queryRunner.manager
           .createQueryBuilder()
           .update(OrderEntity)
           .set(updateData)
@@ -120,11 +109,15 @@ export class OrdersService {
     } catch (error) {
       console.error('Failed to update orders statuses:', error);
 
-      await queryRunner.rollbackTransaction();
+      if (queryRunner.isTransactionActive) {
+        await queryRunner.rollbackTransaction();
+      }
 
       channel.nack(context.getMessage());
     } finally {
-      if (queryRunner) await queryRunner.release();
+      if (!queryRunner.isReleased) {
+        await queryRunner.release();
+      }
     }
   }
 }
